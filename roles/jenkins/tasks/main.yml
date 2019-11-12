@@ -1,0 +1,33 @@
+---
+# tasks file for jenkins
+
+- name: Update apt package
+  apt:
+    update_cache: yes
+- name: Install openjdk
+  apt:
+    name: openjdk-8-jdk
+    state: latest 
+- name: Adding jenkins apt repository key
+  apt_key:
+    url: https://pkg.jenkins.io/debian/jenkins.io.key
+    state: present
+- name: Adding jenkins apt repository
+  apt_repository:
+    repo: deb https://pkg.jenkins.io/debian binary/
+    state: present
+- name: Download specific jenkins version
+  get_url:
+    url: "{{ jenkins_url }}/jenkins_{{ jenkins_version }}_all.deb"
+    # url: "{{ jenkins_pkg_url }}/jenkins_{{ jenkins_version }}_all.deb"
+    dest: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+- name: Install our specifc version of Jenkins.
+  apt:
+    deb: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+    state: present
+
+# - name: Install plugin
+#   jenkins_plugin:
+#     name: build-pipeline-plugin    
+
+# https://pkg.jenkins.io/debian-stable/binary/jenkins_2.7.3_all.deb

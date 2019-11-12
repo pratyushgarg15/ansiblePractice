@@ -1,0 +1,8 @@
+- hosts: assignment
+  become: yes
+  name: Ansible Assignment
+
+  roles:
+    - docker
+    - app
+    - jenkins
