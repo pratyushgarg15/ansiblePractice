@@ -3,6 +3,7 @@
   name: Ansible Assignment
 
   roles:
-    - docker
-    - app
+    # - docker
+    # - app
     - jenkins
+    # - docker-compose

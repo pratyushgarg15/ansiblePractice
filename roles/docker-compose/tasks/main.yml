@@ -1,0 +1,16 @@
+---
+# tasks file for docker-compose
+
+- name: Creates directory
+  file:
+    path: /home/ubuntu/assignment
+    state: directory
+
+- name: copy docker-compose.yml file
+  copy:
+    src: /home/pratyush/docker-comp/docker-compose.yml   
+    dest: /home/ubuntu/assignment
+    mode: '0644'
+
+- name: run docker compose
+  shell: cd assignment ; docker-compose up -d ;

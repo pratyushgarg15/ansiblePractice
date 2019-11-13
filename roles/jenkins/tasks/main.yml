@@ -1,33 +1,86 @@
 ---
-# tasks file for jenkins
 
 - name: Update apt package
   apt:
-    update_cache: yes
+   update_cache: yes
+
 - name: Install openjdk
   apt:
-    name: openjdk-8-jdk
-    state: latest 
+   name: openjdk-8-jdk
+   state: latest
+
 - name: Adding jenkins apt repository key
   apt_key:
-    url: https://pkg.jenkins.io/debian/jenkins.io.key
-    state: present
+   url: https://pkg.jenkins.io/debian/jenkins.io.key
+   state: present
+
 - name: Adding jenkins apt repository
   apt_repository:
-    repo: deb https://pkg.jenkins.io/debian binary/
-    state: present
+   repo: deb https://pkg.jenkins.io/debian binary/
+   state: present
+
 - name: Download specific jenkins version
   get_url:
-    url: "{{ jenkins_url }}/jenkins_{{ jenkins_version }}_all.deb"
-    # url: "{{ jenkins_pkg_url }}/jenkins_{{ jenkins_version }}_all.deb"
+    url: "{{ jenkins_pkg_url }}/jenkins_{{ jenkins_version }}_all.deb"
     dest: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
-- name: Install our specifc version of Jenkins.
+
+- name: Install our specific version of Jenkins
   apt:
-    deb: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
-    state: present
+   deb: "/tmp/jenkins_{{ jenkins_version }}_all.deb"
+   state: present
 
-# - name: Install plugin
-#   jenkins_plugin:
-#     name: build-pipeline-plugin    
+- name: Restart jenkins service
+  shell: service jenkins restart; sleep 1m
 
-# https://pkg.jenkins.io/debian-stable/binary/jenkins_2.7.3_all.deb
+- name: Create jenkins user
+  shell: wget http://localhost:8080/jnlpJars/jenkins-cli.jar ; echo 'jenkins.model.Jenkins.instance.securityRealm.createAccount("pratyush", "pratyush@123")' | java -jar ./jenkins-cli.jar -s "http://localhost:8080" -auth admin:`cat /var/lib/jenkins/secrets/initialAdminPassword` -noKeyAuth groovy = _
+
+- name: Create Jenkins updates directory
+  file:
+   path: "{{ jenkins_home }}/updates"
+   state: directory
+   owner: jenkins
+   group: jenkins
+
+- name: Download plugins updates for jenkins
+  get_url:
+   url: https://updates.jenkins.io/update-center.json
+   dest: "{{ jenkins_home }}/updates/default.json"
+   owner: jenkins
+   group: jenkins
+   mode: 0440
+
+- name: Fix Crumb Issue
+  become: yes
+  lineinfile:
+   path: /etc/default/jenkins
+   line: 'JAVA_ARGS="$JAVA_ARGS -Dhudson.security.csrf.DefaultCrumbIssuer.EXCLUDE_SESSION_ID=true"'  
+   insertafter: EOF
+
+- name: Restart Jenkins
+  shell: service jenkins restart; sleep 2m   
+
+- name: Install jenkins plugins
+  jenkins_plugin:
+   name: "{{ item }}"
+   jenkins_home: "{{ jenkins_home }}"
+   url_username: "{{ jenkins_admin_username }}"
+   url_password: "{{ jenkins_admin_password }}"
+   state: present
+   updates_url: https://updates.jenkins.io
+   url: http://localhost:8080
+   with_dependencies: true
+  with_items: "{{ jenkins_plugins }}"
+
+- name: Restart Jenkins
+  shell: service jenkins restart; sleep 2m
+
+
+  # - name: Install plugins with a specific version
+  #     jenkins_plugin:
+  #       name: "{{ item.key }}"
+  #       version: "{{ item.value['version'] }}"
+  #     register: my_jenkins_plugin_versioned
+  #     when: >
+  #       'version' in item.value
+  #     with_dict: "{{ my_jenkins_plugins }}"
